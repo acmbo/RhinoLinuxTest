@@ -1,0 +1,36 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup> 
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+	<PlatformTarget>x64</PlatformTarget>
+  </PropertyGroup>
+ 
+	<PropertyGroup Condition="$([MSBuild]::IsOSPlatform(linux))">
+		<TargetFramework>net9.0</TargetFramework>
+		<DefineConstants>LINUX</DefineConstants>
+		<RuntimeIdentifiers>linux-x64</RuntimeIdentifiers>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="$([MSBuild]::IsOSPlatform(windows))">
+		<TargetFramework>net8.0-windows</TargetFramework>
+	</PropertyGroup>
+
+
+	<ItemGroup Condition="$([MSBuild]::IsOSPlatform(linux))">
+
+		<PackageReference Include="RhinoCommon" Version="8.25.25314.11001" PrivateAssets="all" ExcludeAssets="runtime">
+			<IncludeAssets>compile; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
+
+	</ItemGroup>
+
+	<ItemGroup Condition="$([MSBuild]::IsOSPlatform(windows))">
+		<PackageReference Include="RhinoCommon" Version="8.25.25314.11001" PrivateAssets="all" ExcludeAssets="runtime">
+			<IncludeAssets>compile; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
+
+	</ItemGroup>
+
+
+</Project>
