@@ -200,9 +200,10 @@ public static class BoxSolver
             Directory.CreateDirectory(outputDirectory);
 
             operation = "adding the Brep to the temporary 3dm model";
+            Guid objectId;
             using (var model = new File3dm())
             {
-                var objectId = model.Objects.AddBrep(brep);
+                objectId = model.Objects.AddBrep(brep);
                 if (objectId == Guid.Empty)
                 {
                     throw new BoxSolverException(
@@ -251,14 +252,17 @@ public static class BoxSolver
                             readLog));
                 }
 
-                operation = "retrieving the object from the re-opened 3dm file";
-                var persistedObject = readBack.Objects.FirstOrDefault();
+                // Object IDs are persisted by the 3dm format. Prefer an ID lookup over
+                // enumeration because File3dmObjectTable's Linux enumerator can report the
+                // correct Count while failing to materialize an entry.
+                operation = $"retrieving object '{objectId}' from the re-opened 3dm file";
+                var persistedObject = readBack.Objects.FindId(objectId);
                 if (persistedObject is null)
                 {
                     throw new BoxSolverException(
                         BoxSolverExitCode.OutputValidation,
                         WithRhinoReadLog(
-                            "The written 3dm file reports one object, but Rhino returned a null object entry.",
+                            $"The written 3dm file reports one object, but Rhino could not retrieve the expected object '{objectId}'.",
                             readLog));
                 }
 
