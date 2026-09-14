@@ -7,9 +7,8 @@
   </PropertyGroup>
  
 	<PropertyGroup Condition="$([MSBuild]::IsOSPlatform(linux))">
-		<TargetFramework>net9.0</TargetFramework>
+		<TargetFramework>net10.0</TargetFramework>
 		<DefineConstants>LINUX</DefineConstants>
-		<RuntimeIdentifiers>linux-x64</RuntimeIdentifiers>
 	</PropertyGroup>
 
 	<PropertyGroup Condition="$([MSBuild]::IsOSPlatform(windows))">
@@ -19,7 +18,7 @@
 
 	<ItemGroup Condition="$([MSBuild]::IsOSPlatform(linux))">
 
-		<PackageReference Include="RhinoCommon" Version="8.25.25314.11001" PrivateAssets="all" ExcludeAssets="runtime">
+		<PackageReference Include="RhinoCommon" Version="9.0.25350.305-wip" PrivateAssets="all" ExcludeAssets="runtime">
 			<IncludeAssets>compile; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
 

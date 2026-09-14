@@ -10,9 +10,8 @@
   </PropertyGroup>
 	
 	<PropertyGroup Condition="$([MSBuild]::IsOSPlatform(linux))">
-		<TargetFramework>net9.0</TargetFramework>
+		<TargetFramework>net10.0</TargetFramework>
 		<DefineConstants>LINUX</DefineConstants>
-		<RuntimeIdentifiers>linux-x64</RuntimeIdentifiers>
 	</PropertyGroup>
 
 	<PropertyGroup Condition="$([MSBuild]::IsOSPlatform(windows))">
@@ -22,7 +21,7 @@
 
 	<ItemGroup Condition="$([MSBuild]::IsOSPlatform(linux))">
 		
-		<PackageReference Include="Rhino.Inside" Version="9.0.10-beta" />
+		<PackageReference Include="Rhino.Inside" Version="9.0.26084.13070-beta" />
 	</ItemGroup>
 
 	<ItemGroup Condition="$([MSBuild]::IsOSPlatform(windows))">
@@ -36,9 +35,6 @@
 		<PackageReference Include="Serilog.Sinks.Console" Version="6.1.1" />
 		<PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
 		
-	</ItemGroup>
-	<ItemGroup Condition="$([MSBuild]::IsOSPlatform(linux))">
-		<PackageReference Include="System.Drawing.Common" Version="9.0.0" />
 	</ItemGroup>
 	<ItemGroup>
 	  <ProjectReference Include="..\RhinoLib\RhinoLib.csproj" />

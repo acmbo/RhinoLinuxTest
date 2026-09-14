@@ -142,7 +142,7 @@ namespace GDEnergyWorker
 
             string rhinoVersion = "8.0";
 
-#if DEBULINUX
+#if LINUX
 
 #else
             rhinoDir = Registry.GetValue($@"HKEY_LOCAL_MACHINE\SOFTWARE\McNeel\Rhinoceros\{rhinoVersion}\Install", "Path", null) as string ?? string.Empty;
@@ -151,10 +151,10 @@ namespace GDEnergyWorker
 
             logger.Information("Starting RhinoInside");
 
-            RhinoInside.Resolver.Initialize();
+            RhinoInside.Resolver.Initialize(Environment.GetEnvironmentVariable("RHINO_SYSTEM_DIR") ?? "/usr/lib/rhino3d");
 
             logger.Information("RhinoInside solved");
-#if DEBULINUX
+#if LINUX
 
 #else
             string envPath = Environment.GetEnvironmentVariable("path");
