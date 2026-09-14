@@ -181,19 +181,36 @@ public static class BoxSolver
 
     private static void WriteAndVerify3dm(Brep brep, string outputPath)
     {
+        ArgumentNullException.ThrowIfNull(brep);
+
+        if (string.IsNullOrWhiteSpace(outputPath))
+        {
+            throw new BoxSolverException(BoxSolverExitCode.OutputValidation, "The output path is empty.");
+        }
+
         var outputDirectory = Path.GetDirectoryName(outputPath)
             ?? throw new BoxSolverException(BoxSolverExitCode.OutputValidation, "The output path has no parent directory.");
         var temporaryPath = Path.Combine(
             outputDirectory,
             $".{Path.GetFileNameWithoutExtension(outputPath)}.{Guid.NewGuid():N}.tmp.3dm");
+        var operation = "creating the temporary output directory";
 
         try
         {
             Directory.CreateDirectory(outputDirectory);
 
+            operation = "adding the Brep to the temporary 3dm model";
             using (var model = new File3dm())
             {
-                model.Objects.AddBrep(brep);
+                var objectId = model.Objects.AddBrep(brep);
+                if (objectId == Guid.Empty)
+                {
+                    throw new BoxSolverException(
+                        BoxSolverExitCode.OutputValidation,
+                        "Rhino did not add the Brep to the temporary 3dm model.");
+                }
+
+                operation = "writing the temporary 3dm file";
                 if (!model.Write(temporaryPath, 8))
                 {
                     throw new BoxSolverException(
@@ -202,47 +219,134 @@ public static class BoxSolver
                 }
             }
 
-            using var readBack = File3dm.Read(temporaryPath)
-                ?? throw new BoxSolverException(
-                    BoxSolverExitCode.OutputValidation,
-                    $"Rhino could not re-open the temporary 3dm file '{temporaryPath}'.");
-
-            if (readBack.Objects.Count != 1)
+            operation = "checking the temporary 3dm file";
+            var temporaryFile = new FileInfo(temporaryPath);
+            if (!temporaryFile.Exists || temporaryFile.Length == 0)
             {
                 throw new BoxSolverException(
                     BoxSolverExitCode.OutputValidation,
-                    "The written 3dm file does not contain exactly one object.");
+                    $"Rhino reported success, but the temporary 3dm file '{temporaryPath}' was not created or is empty.");
             }
 
-            var persistedObject = readBack.Objects.First();
-            if (persistedObject.Geometry is not Brep persistedBrep ||
-                !persistedBrep.IsValid ||
-                !persistedBrep.IsSolid)
+            operation = "re-opening the temporary 3dm file";
+            var readBack = File3dm.ReadWithLog(temporaryPath, out var readLog);
+            if (readBack is null)
             {
                 throw new BoxSolverException(
                     BoxSolverExitCode.OutputValidation,
-                    "The written 3dm file does not contain one valid solid Brep.");
+                    WithRhinoReadLog(
+                        $"Rhino could not re-open the temporary 3dm file '{temporaryPath}'.",
+                        readLog));
             }
 
+            using (readBack)
+            {
+                operation = "counting objects in the re-opened 3dm file";
+                if (readBack.Objects.Count != 1)
+                {
+                    throw new BoxSolverException(
+                        BoxSolverExitCode.OutputValidation,
+                        WithRhinoReadLog(
+                            "The written 3dm file does not contain exactly one object.",
+                            readLog));
+                }
+
+                operation = "retrieving the object from the re-opened 3dm file";
+                var persistedObject = readBack.Objects.FirstOrDefault();
+                if (persistedObject is null)
+                {
+                    throw new BoxSolverException(
+                        BoxSolverExitCode.OutputValidation,
+                        WithRhinoReadLog(
+                            "The written 3dm file reports one object, but Rhino returned a null object entry.",
+                            readLog));
+                }
+
+                operation = "retrieving the object's geometry from the re-opened 3dm file";
+                var persistedGeometry = persistedObject.Geometry;
+                if (persistedGeometry is null)
+                {
+                    throw new BoxSolverException(
+                        BoxSolverExitCode.OutputValidation,
+                        WithRhinoReadLog(
+                            "The written 3dm file contains an object with null geometry.",
+                            readLog));
+                }
+
+                if (persistedGeometry is not Brep persistedBrep)
+                {
+                    throw new BoxSolverException(
+                        BoxSolverExitCode.OutputValidation,
+                        WithRhinoReadLog(
+                            $"The written 3dm file contains a {persistedGeometry.GetType().Name}, not a Brep.",
+                            readLog));
+                }
+
+                operation = "validating the re-opened Brep";
+                if (!persistedBrep.IsValid)
+                {
+                    throw new BoxSolverException(
+                        BoxSolverExitCode.OutputValidation,
+                        WithRhinoReadLog(
+                            "The written 3dm file does not contain a valid Brep.",
+                            readLog));
+                }
+
+                if (!persistedBrep.IsSolid)
+                {
+                    throw new BoxSolverException(
+                        BoxSolverExitCode.OutputValidation,
+                        WithRhinoReadLog(
+                            "The written 3dm file does not contain a solid Brep.",
+                            readLog));
+                }
+            }
+
+            operation = "publishing the validated 3dm file";
             File.Move(temporaryPath, outputPath, overwrite: true);
         }
         catch (BoxSolverException)
         {
             throw;
         }
+        catch (NullReferenceException exception)
+        {
+            throw new BoxSolverException(
+                BoxSolverExitCode.OutputValidation,
+                $"Rhino returned an incomplete object while {operation}; the output file '{outputPath}' was not replaced.",
+                exception);
+        }
         catch (Exception exception)
         {
             throw new BoxSolverException(
                 BoxSolverExitCode.OutputValidation,
-                $"Unable to write or validate the output file '{outputPath}'.",
+                $"Unable to write or validate the output file '{outputPath}' while {operation}.",
                 exception);
         }
         finally
+        {
+            TryDeleteTemporaryFile(temporaryPath);
+        }
+    }
+
+    private static string WithRhinoReadLog(string message, string? readLog) =>
+        string.IsNullOrWhiteSpace(readLog)
+            ? message
+            : $"{message} Rhino read log: {readLog.Trim()}";
+
+    private static void TryDeleteTemporaryFile(string temporaryPath)
+    {
+        try
         {
             if (File.Exists(temporaryPath))
             {
                 File.Delete(temporaryPath);
             }
+        }
+        catch (Exception exception)
+        {
+            // Do not replace a more useful write or validation failure with cleanup failure.
+            Console.Error.WriteLine($"WARNING: Could not delete temporary file '{temporaryPath}': {exception.Message}");
         }
     }
 
