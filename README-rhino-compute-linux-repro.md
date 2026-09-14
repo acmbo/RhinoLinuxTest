@@ -2,12 +2,12 @@
 
 This solution now contains a **new class library**, `RhinoComputeLinuxRepro`, plus a small console runner, `RhinoComputeLinuxRepro.Runner`.
 
-It intentionally distinguishes two tests that produced different results on September 14, 2026:
+It intentionally distinguishes two tests with platform-dependent results verified on September 14, 2026:
 
-- **`compute-api`** sends a real native-geometry request to a running Linux Rhino.Compute service. On the tested installation it succeeds with HTTP 200 and a serialized mesh.
-- **`standalone`** starts Rhino through Rhino.Inside and calls `Brep.CreateFromBox`. On the affected Linux installation it reaches `RhinoCore` construction and then terminates with `Rhino.Runtime.NotLicensedException` (exit 134).
+- **`compute-api`** sends a real native-geometry request to a running Linux Rhino.Compute service. It succeeds with HTTP 200 and a serialized mesh in both tested environments.
+- **`standalone`** starts Rhino through Rhino.Inside and calls `Brep.CreateFromBox`. It succeeds in the full Ubuntu VM but reaches `RhinoCore` and then terminates with `Rhino.Runtime.NotLicensedException` (exit 134) under WSL2.
 
-Do not describe the working Compute HTTP request as an API failure. The useful developer question is why normal `compute.geometry` startup can execute native geometry when the standalone Rhino.Inside host cannot.
+Do not describe the working Compute HTTP request as an API failure, and do not describe standalone Rhino.Inside as generally broken on Linux. The current contrast is Ubuntu VM pass versus WSL2 failure for the standalone host.
 
 ## Build
 
@@ -18,6 +18,8 @@ dotnet build RhinoLinxTest.sln --configuration Release
 ```
 
 The runner targets .NET 10 and references the same Rhino.Inside/RhinoCommon package versions as the standalone reproduction. RhinoCommon is compile-only; the standalone mode resolves the installed Rhino runtime through Rhino.Inside.
+
+Use a normal system or local .NET 10 installation. On the tested Ubuntu VM, the Snap-managed `dotnet` host injected Core 22's older `libstdc++.so.6`, causing a pre-start `GLIBCXX_3.4.32` error. That native-loader failure is unrelated to Rhino licensing.
 
 ## 1. Test a running Rhino.Compute service
 
@@ -40,7 +42,7 @@ Content-Type: application/json
 
 A successful result reports HTTP 200 and `Serialized mesh returned: True`.
 
-## 2. Reproduce the standalone Rhino.Inside licensing failure
+## 2. Compare standalone Rhino.Inside behavior
 
 On Linux, set `RHINO_TOKEN` without echoing it and point `RHINO_SYSTEM_DIR` to the installed Rhino directory if it is not `/usr/lib/rhino3d`:
 
@@ -51,7 +53,7 @@ export RHINO_SYSTEM_DIR=/usr/lib/rhino3d
 dotnet run --project RhinoComputeLinuxRepro.Runner -- --mode standalone
 ```
 
-Expected affected-system output:
+Expected WSL2 failure output:
 
 ```text
 CHECKPOINT: Resolver initialized from /usr/lib/rhino3d.
@@ -60,4 +62,4 @@ CHECKPOINT: Calling deterministic Brep.CreateFromBox operation.
 Unhandled exception. Rhino.Runtime.NotLicensedException: ...
 ```
 
-The exception is raised by the native licensing callback and may terminate the process with exit code 134 before managed exception handling can continue. The token is never printed by this sample.
+The exception is raised by the native licensing callback and may terminate the process with exit code 134 before managed exception handling can continue. On the verified Ubuntu VM, the same command exits `0` and reports successful standalone geometry. The token is never printed by this sample.

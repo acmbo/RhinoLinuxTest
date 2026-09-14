@@ -30,6 +30,34 @@ restriction, a Rhino package/version difference, or a WSL-specific limitation or
 bug in the current Linux licensing path. Machine identity, user/cache state, TLS
 configuration, proxy behavior, and clock drift remain secondary possibilities.
 
+## Verified Ubuntu VM baseline
+
+A controlled retest on September 14, 2026 completed the entire standalone
+workflow on the Ubuntu VM. `RhinoInside.MinimalHost`, the standalone runner, and
+the box sample all exited `0`. The box sample created and read back a valid solid
+`10 × 20 × 30` Brep with volume `6000` in a 23,580-byte `.3dm`. The installed
+Compute API also returned `200 OK` with a serialized mesh.
+
+The VM uses the same recorded `rhino3d` (`9.0.26257.7309`) and `rhino-compute`
+(`9.0.26159.12510-wip`) package versions as WSL2, and its Rhino.Inside binary
+has the already-matching SHA-256. Package version and Rhino.Inside provenance
+are therefore no longer leading explanations. WSL2 hashes for RhinoCommon and
+the native Rhino library are still needed for a complete binary comparison.
+
+The VM's Snap-managed `dotnet` initially caused a separate pre-start
+`GLIBCXX_3.4.32` loader failure. Bypassing Snap's Core 22 C++ runtime made every
+standalone test pass. This loader failure is distinct from the WSL2
+`NotLicensedException`, which occurs only after resolver initialization and
+RhinoCore construction. See
+[`ubuntu-vm-compatibility-retest-2026-09-14.md`](ubuntu-vm-compatibility-retest-2026-09-14.md)
+for exact results and hashes.
+
+A narrow successful VM `strace` contained no internet-socket `connect` call and
+no `EACCES` or `EPERM`. This weakens the claim that every successful standalone
+startup must establish a new outbound TCP connection, although cached licensing
+state or untraced behavior remains possible. A matching WSL2 trace is required
+before drawing a licensing-network conclusion.
+
 ## What `NotLicensedException` means here
 
 The error does not necessarily mean that Rhino cannot read `RHINO_TOKEN`.
