@@ -1,0 +1,4 @@
+[ERROR] FATAL UNHANDLED EXCEPTION: Rhino.Runtime.NotLicensedException: Exception of type 'Rhino.Runtime.NotLicensedException' was thrown.
+   at Rhino.Runtime.NotLicensedException.ThrowNotLicensedException(Object sender, NamedParametersEventArgs args) in /scratch/buildAgent/work/db0f3a602490518c/src4/DotNetSDK/rhinocommon/dotnet/hostutils.cs:line 63
+   at Rhino.Runtime.HostUtils.ExecuteNamedCallbackHelper(IntPtr name, IntPtr ptrNamedParams) in /scratch/buildAgent/work/db0f3a602490518c/src4/DotNetSDK/rhinocommon/dotnet/hostutils.cs:line 2131
+[END ERROR]
