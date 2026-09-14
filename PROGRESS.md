@@ -185,6 +185,7 @@ shared logs or reports.
 - `doc/rhino-inside-linux-next-steps.md` — earlier investigation notes.
 - `doc/rhino-wsl-vs-ubuntu-vm-licensing-findings-2026-09-14.md` — platform comparison and diagnostic sequence.
 - `doc/ubuntu-vm-compatibility-retest-2026-09-14.md` — verified full Ubuntu VM pass, hashes, and Snap runtime caveat.
+- `doc/wsl-ubuntu-test-progress.md` — focused WSL2/Ubuntu VM session handoff with completed work, five remaining steps, and copyable resume commands.
 
 ## Next steps
 
