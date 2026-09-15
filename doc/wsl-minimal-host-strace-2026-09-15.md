@@ -87,11 +87,32 @@ failed outbound TCP connection or an access-denied syscall that explains the
 WSL licensing failure. The different number of Unix-domain connects and
 candidate-path probes alone is not causal evidence.
 
-## Remaining comparison
+## Corrected WSL identity follow-up
 
-An exact normalized path-level diff still requires both protected raw traces on
-one trusted machine. Use `tools/compare-rhino-straces.py` as documented in
-`wsl-ubuntu-comparison-tooling-2026-09-15.md` to compare reviewed `ENOENT`,
-`EACCES`, `EPERM`, and `connect` records by path and syscall. Redact local
-identifiers, and only then add selected evidence to a McNeel report. Keep both
-raw captures out of Git and never include the token.
+On September 15, the read-based compatibility collector was run in WSL from a
+token-bearing process with the native local .NET `10.0.111` host on `PATH`. It
+confirmed that `/proc/sys/kernel/random/boot_id` is present, readable, and
+non-empty; `/sys/class/dmi/id` and the tested DMI product/vendor paths are
+absent. This corrects the earlier invalid inference that the WSL boot ID was
+empty from a procfs `test -s` check. The collector did not print any identifier
+or token value.
+
+## Exact comparison result
+
+The protected VM trace was imported into the Git-ignored `artifacts/` directory
+and compared with the WSL trace using additional mappings for both application
+outputs and .NET roots. The normalized output contains no local home path,
+Windows username, token/authorization marker, IPv4-like string, or unnormalized
+GUID.
+
+The comparison found a material licensing-state mismatch. The passing VM
+successfully opened an existing per-user `.lic` file and Rhino keypair beneath
+`<HOME>/.config/McNeel/Rhinoceros/6.0/License Manager/Licenses/`, then updated
+Cloud Zoo state. The failing WSL process loaded `CloudZooClient.dll`, but
+`<HOME>/.config` returned `ENOENT`; it never reached equivalent cached license
+state.
+
+This means the VM trace is not a clean token-only baseline. The next controlled
+test must use fresh users or isolated per-user configuration on both platforms.
+See `vm-wsl-strace-exact-comparison-2026-09-15.md` for the reviewed findings.
+Keep both raw captures out of Git and never include or copy licensing files.

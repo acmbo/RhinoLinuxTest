@@ -17,8 +17,9 @@ WSL2. Installed Rhino.Compute can execute native geometry in both environments.
 
 ## Current conclusion
 
-**The standalone failure is specific to the tested WSL2 environment. It is not a
-general Rhino.Inside-on-Linux failure.**
+**The observed pass/fail remains Ubuntu-VM-pass versus WSL2-fail, but the exact
+trace comparison found that per-user licensing state was not equivalent. A
+WSL2-specific defect is therefore not yet proven.**
 
 The Ubuntu VM completed all currently implemented tests:
 
@@ -54,16 +55,24 @@ construction, then aborts at the first native geometry operation with exit code
 - [x] Capture a narrow successful Ubuntu VM `strace` baseline.
 - [x] Identify the unrelated Snap .NET `GLIBCXX_3.4.32` loader problem.
 
-### Remaining technical steps: 2
+### Remaining technical steps: 1
 
 - [x] **1. Re-run the focused tests from an unrestricted WSL host context.**
 - [x] **2. Capture and compare the WSL installed-runtime hashes.**
 - [x] **3. Verify the WSL .NET host and native library resolution.**
 - [x] **4. Capture the matching WSL `strace` because licensing still fails.**
-- [ ] **5. Re-run the machine-identity availability probe in WSL using the
-  read-based collector; the earlier `test -s` boot-ID result is inconclusive.**
-- [ ] **6. Compare and sanitize the protected raw VM/WSL traces by exact path and
-  syscall context for a McNeel report.**
+- [x] **5. Re-run the machine-identity availability probe in WSL using the
+  read-based collector.** The September 15 run confirmed that the boot ID is
+  present, readable, and non-empty; the tested DMI paths are absent. This
+  replaces the earlier inconclusive `test -s` result.
+- [x] **6. Compare and sanitize the protected raw VM/WSL traces by exact path and
+  syscall context.** The comparison found no internet or access-denied failure,
+  but it did find an existing VM `.lic`/keypair cache versus an absent WSL
+  `<HOME>/.config` directory.
+- [ ] **7. Repeat the minimal-host test with equivalent clean per-user licensing
+  state on both systems.** Follow
+  `directTests/clean-state-rhino-licensing-test.md`; do not copy licensing files
+  between machines.
 
 Keep the Snap loader error, WSL licensing failure, and Compute API result
 separate in all reports.
@@ -92,9 +101,13 @@ not retained on this Windows-mounted repository checkout.
 See `wsl-minimal-host-strace-2026-09-15.md` for the result and high-level VM
 comparison. The repository now includes `tools/compare-rhino-straces.py` for the
 exact reviewed path-level comparison and `tools/collect-rhino-compat-context.sh`
-for the corrected boot-ID probe. The remaining actions are to run that probe in
-WSL and compare the protected raw traces. Raw traces must be reviewed locally
-before sharing because they can include local paths, hostnames, and IP addresses.
+for the corrected boot-ID probe. That probe completed on September 15: it
+confirmed a readable, non-empty WSL boot ID and absent tested DMI paths, without
+printing any identifier. The protected VM trace was subsequently imported and
+compared. The passing VM read an existing per-user `.lic` and keypair; the
+failing WSL user's `<HOME>/.config` directory was absent. The remaining action
+is a clean-state licensing comparison. Raw traces must still be reviewed before
+sharing because they can include local paths, hostnames, and IP addresses.
 
 ## Repository layout
 
@@ -226,8 +239,9 @@ Steps 1 through 7 below remain the clean full-reproduction procedure. They were
 completed in the latest live retest using existing matching Release outputs;
 restore/build was not repeated. Step 8 was completed on September 15 with the
 safer temporary rootless tracer described in
-`wsl-live-retest-2026-09-14.md`. Resume with the exact reviewed VM/WSL raw-trace
-comparison described in `wsl-minimal-host-strace-2026-09-15.md`.
+`wsl-live-retest-2026-09-14.md`. The raw-trace comparison is complete; resume
+with the equivalent clean-user or isolated-configuration test described in
+`vm-wsl-strace-exact-comparison-2026-09-15.md`.
 
 Run the following from a normal, unrestricted WSL terminal rather than an IDE,
 agent sandbox, container, or restricted CI process.
@@ -432,9 +446,14 @@ Additional trace answers now established:
    `EPERM`. WSL has 135 `ENOENT` results versus the VM's 189, so the count alone
    is not a causal difference.
 
-The remaining question is whether an exact reviewed raw-trace diff identifies a
-material path or context difference, including user/XDG state, licensing caches,
-certificate stores, proxy behavior, time, or machine-identity interfaces.
+6. **Yes, a material difference was found.** The passing VM read an existing
+   per-user `.lic` and keypair and updated Cloud Zoo state. The failing WSL
+   process found `<HOME>/.config` absent and never accessed equivalent license
+   state.
+
+The remaining question is whether the VM can establish a license from equivalent
+clean per-user state while WSL cannot. Until that control is run, the traces do
+not prove a WSL2-specific defect.
 
 ## Reporting rules
 

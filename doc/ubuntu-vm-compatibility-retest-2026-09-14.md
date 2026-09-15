@@ -120,10 +120,13 @@ calls, all to local Unix-domain tracing/name-service sockets; it contained no
 a WSL diff identifies specific missing paths that occur only in the failing run.
 
 This means the successful VM execution did not require a newly observed outbound
-TCP connection during this syscall window. It does not prove that Rhino licensing
-never uses the network: a reusable local licensing state, a different syscall
-selection, or behavior outside this test could still matter. The matching WSL2
-trace is now the highest-value comparison.
+TCP connection during this syscall window. The exact September 15 comparison
+subsequently confirmed that reusable local licensing state did matter to the
+interpretation: this VM process read an existing per-user `.lic` and keypair and
+updated Cloud Zoo state. The failing WSL user's `<HOME>/.config` directory was
+absent. The VM trace is therefore not a clean token-only licensing baseline, and
+an equivalent clean-user or isolated-configuration retest is required. See
+`vm-wsl-strace-exact-comparison-2026-09-15.md`.
 
 ## Retained local artifacts
 

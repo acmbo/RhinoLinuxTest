@@ -39,8 +39,11 @@ volume, writes a `.3dm`, reopens it, and validates the persisted Brep.
 
 ## Current status
 
-**The issue is now WSL2-specific in the tested environments. Standalone
-Rhino.Inside and installed Rhino.Compute both pass on the Ubuntu VM.**
+**The exact trace comparison found a material per-user licensing-state
+mismatch, so a WSL2-specific standalone defect is not yet proven.** The Ubuntu
+VM standalone test passed while reading an existing cached `.lic` and keypair;
+the failing WSL user's `<HOME>/.config` directory was absent. Installed
+Rhino.Compute continues to pass in both environments.
 
 Controlled Ubuntu VM results from September 14, 2026:
 
@@ -85,16 +88,23 @@ On September 15, a clean matching WSL `strace` was captured from the same ext4
 checkout with a local non-Snap .NET host and a temporary rootless tracer. The
 minimal host again exited `134`. Its 25 trace files recorded zero `connect`
 calls (including `AF_INET`/`AF_INET6`), zero `EACCES`, zero `EPERM`, and 135
-`ENOENT` candidate-path results. The raw WSL trace is retained only in the
-native-ext4 checkout's Git-ignored artifact directory, not this Windows-mounted
-repository checkout. At a high level, neither this trace nor the passing VM
-trace shows an internet connect or a permission denial in the chosen syscall
-set. An exact reviewed path-level comparison with the protected VM raw trace is
-still required. A reusable normalizer/diff tool and a non-secret compatibility
-context collector were added on September 15. The corrected collector also
-showed that `test -s` is unsuitable for the procfs boot-ID check, so the earlier
-claim that WSL's `boot_id` is empty must be retested by reading it without
-printing its value. See `doc/wsl-minimal-host-strace-2026-09-15.md` and
+`ENOENT` candidate-path results. The imported passing VM trace has 21 files,
+four failed local Unix-domain connects, no internet connect, no `EACCES` or
+`EPERM`, and 189 selected failure/connect events.
+
+The exact reviewed comparison is now complete. The successful VM process read
+an existing per-user license file and keypair under
+`<HOME>/.config/McNeel/Rhinoceros/6.0/License Manager/Licenses/`, while the
+failing WSL process found `<HOME>/.config` absent and never reached that license
+cache. This is a material confound: the VM trace is not a clean token-only
+baseline. A clean-user or isolated-configuration retest on both platforms is
+required before classifying the failure as WSL2-specific.
+
+The corrected WSL context collector also confirmed that
+`/proc/sys/kernel/random/boot_id` is present, readable, and non-empty, while the
+tested DMI paths are absent. Neither raw trace references boot ID or DMI in the
+selected syscall set. See `doc/vm-wsl-strace-exact-comparison-2026-09-15.md`,
+`doc/wsl-minimal-host-strace-2026-09-15.md`, and
 `doc/wsl-ubuntu-comparison-tooling-2026-09-15.md`.
 
 See `doc/ubuntu-vm-compatibility-retest-2026-09-14.md` for exact VM results and
@@ -210,22 +220,24 @@ shared logs or reports.
 - `doc/ubuntu-vm-compatibility-retest-2026-09-14.md` — verified full Ubuntu VM pass, hashes, and Snap runtime caveat.
 - `doc/wsl-ubuntu-test-progress.md` — focused WSL2/Ubuntu VM session handoff and copyable resume commands.
 - `doc/wsl-live-retest-2026-09-14.md` — live non-Snap WSL retest results and the original trace-capture handoff.
-- `doc/wsl-minimal-host-strace-2026-09-15.md` — completed WSL trace, high-level VM comparison, and remaining exact-diff action.
+- `doc/wsl-minimal-host-strace-2026-09-15.md` — completed WSL trace and exact VM comparison result.
 - `doc/wsl-ubuntu-comparison-tooling-2026-09-15.md` — corrected identity probe and reusable protected-trace comparison commands.
+- `doc/vm-wsl-strace-exact-comparison-2026-09-15.md` — reviewed exact trace comparison and the per-user licensing-cache confound.
+- `doc/directTests/clean-state-rhino-licensing-test.md` — copyable Ubuntu VM/WSL clean-state procedure using `tools/run-rhino-clean-state-test.sh`.
 
 ## Next steps
 
-1. Run `tools/collect-rhino-compat-context.sh` in unrestricted WSL to replace
-   the earlier unreliable `test -s` boot-ID result with a read-based presence
-   check that does not print the identifier.
-2. Compare the reviewed WSL trace with the protected successful Ubuntu VM raw
-   trace using `tools/compare-rhino-straces.py`. Sanitize selected evidence
-   before sharing it; neither raw trace should be committed.
-3. If that exact comparison identifies no material network, access, or path
-   difference, send the minimal reproducer and VM-pass/WSL-fail comparison to
-   McNeel as evidence of a probable WSL2 standalone licensing defect.
-4. Keep the Snap `GLIBCXX` loader error, WSL2 licensing error, and Compute API
-   results separate in all reporting.
+1. Run the minimal host on both systems with equivalent clean per-user Rhino
+   licensing state using the procedure in
+   `doc/directTests/clean-state-rhino-licensing-test.md`. The automation script
+   is `tools/run-rhino-clean-state-test.sh`. Do not copy `.lic`, keypair, or
+   `cloudzoo-9.json` files between machines.
+2. Capture the same narrow trace for both clean-state runs and compare whether
+   each process creates or obtains supported per-user licensing state from the
+   same token.
+3. Only classify the result as a WSL2 defect if the VM passes and WSL fails from
+   equivalent clean state. Keep the Snap loader error and Compute API results
+   separate in all reporting.
 
 ## Known limitations
 

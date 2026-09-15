@@ -25,12 +25,13 @@ algorithm. Existing tests show that:
    in the same WSL2 distribution.
 7. The standalone application can perform licensed geometry in a full Ubuntu VM.
 
-The remaining explanations are a WSL-specific limitation or defect in the
-current Linux licensing path, or a host-context difference that is outside the
-selected syscall evidence. Machine identity, user/cache state, TLS configuration,
-proxy behavior, and clock drift remain hypotheses. The September 15 unrestricted
-WSL trace weakens a simple trace-visible network-denial or permission-denial
-explanation; it does not eliminate behavior outside the captured syscall set.
+The September 15 exact trace comparison found a concrete host-state difference:
+the passing VM read an existing per-user `.lic` and keypair, while the failing
+WSL user's `<HOME>/.config` directory was absent. This makes the current VM pass
+a cached-license baseline rather than a clean token-only baseline. A WSL-specific
+limitation remains possible, but it is not proven until both systems are tested
+with equivalent clean per-user licensing state. The traces still weaken a simple
+network-denial or permission-denial explanation.
 
 ## Verified Ubuntu VM baseline
 
@@ -62,10 +63,10 @@ result in the selected syscall set. The VM had four local Unix-domain connects;
 WSL had none. The aggregate `ENOENT` counts were 189 (VM) and 135 (WSL).
 
 This weakens a simple trace-visible outbound-TCP or permission-denial
-explanation, although cached licensing state or behavior outside the selected
-syscalls remains possible. An exact reviewed path-level comparison with the
-protected VM trace is still required before drawing a licensing conclusion. See
-`wsl-minimal-host-strace-2026-09-15.md`.
+explanation. The exact reviewed path comparison is now complete and found a
+material licensing-cache mismatch: the VM read an existing `.lic` and keypair,
+while WSL never reached an equivalent cache because `<HOME>/.config` was absent.
+See `vm-wsl-strace-exact-comparison-2026-09-15.md`.
 
 ## What `NotLicensedException` means here
 
@@ -398,13 +399,15 @@ Perform the following steps in order:
 6. Compare proxy variables and CA certificates.
 7. Compare machine-identity interface availability.
 8. Compare process user, `HOME`, XDG paths, and relevant file permissions.
-9. Capture sanitized syscall traces on WSL2 and the VM. **Completed at the
-    aggregate level:** neither trace has an internet connect, `EACCES`, or
-    `EPERM` result in the selected syscall set.
-10. Compare the protected raw traces by exact reviewed path and syscall context,
-    then sanitize only the material differences.
-11. If no meaningful difference is found, report the minimal reproduction to
-    McNeel as a probable WSL2 standalone Rhino.Inside licensing defect.
+9. Capture sanitized syscall traces on WSL2 and the VM. **Completed:** neither
+    trace has an internet connect, `EACCES`, or `EPERM` result in the selected
+    syscall set.
+10. Compare the protected raw traces by exact reviewed path and syscall context.
+    **Completed:** the passing VM reused existing per-user licensing state while
+    the WSL user had no `<HOME>/.config` directory.
+11. Repeat both tests with equivalent clean per-user licensing state. Report a
+    probable WSL2 defect only if the VM passes and WSL fails from that controlled
+    state.
 
 ## Syscall comparison
 

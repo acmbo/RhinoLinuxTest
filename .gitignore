@@ -580,3 +580,5 @@ test.runsettings
 
 
 *.csproj.user
+
+tmp/

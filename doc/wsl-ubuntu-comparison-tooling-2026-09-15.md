@@ -32,8 +32,15 @@ DMI product_name                   present, readable, non-empty
 DMI sys_vendor                     present, readable, non-empty
 ```
 
-Run the same collector from a normal WSL terminal before treating boot ID as a
-platform difference:
+The corrected collector was run in WSL on September 15 from a token-bearing
+process with `/home/dev/RhinoOnLinux/.dotnet/dotnet` (`10.0.111`) on `PATH`. It
+reported the WSL boot ID as present, readable, and non-empty, and reported the
+tested DMI paths (`product_uuid`, `product_name`, and `sys_vendor`) as absent.
+The three installed runtime hashes matched the recorded Ubuntu VM values. This
+replaces the earlier inconclusive WSL boot-ID observation; no identifier or
+token value was printed.
+
+The collector is still repeatable from a normal WSL terminal:
 
 ```bash
 cd ~/RhinoOnLinux
@@ -85,11 +92,21 @@ inputs. It found 21 trace files, 189 selected event instances, 186 distinct
 selected events, and zero differences. The context collector passed `bash -n`
 and produced the non-secret VM baseline above.
 
-## Remaining action
+## Exact comparison completed
 
-1. Run the corrected context collector in the unrestricted WSL distribution.
-2. Make the protected WSL and VM trace directories available on one trusted
-   machine; do not commit either raw trace.
-3. Run and manually review the normalized diff.
-4. If no material path, access, or socket difference appears, attach only the
-   reviewed summary and minimal reproducer to the McNeel report.
+The protected VM trace was added to the Git-ignored `artifacts/` directory and
+the VM-versus-WSL comparison completed on September 15. Additional mappings
+normalized both application-output directories and both .NET roots. The saved
+normalized report passed checks for local home paths, the Windows username,
+token/authorization markers, IPv4-like strings, and unnormalized GUIDs.
+
+The failure/connect diff still showed no internet or access-denied explanation.
+Manual review of successful as well as failed path operations found the material
+difference: the passing VM read an existing per-user `.lic` and keypair, while
+the failing WSL process found `<HOME>/.config` absent. The comparer intentionally
+focuses on failures/connects, so this successful VM cache access required the
+additional raw-path review.
+
+The remaining action is an equivalent clean-state run on both platforms. See
+`vm-wsl-strace-exact-comparison-2026-09-15.md`. Do not commit either raw trace or
+copy licensing files between systems.
