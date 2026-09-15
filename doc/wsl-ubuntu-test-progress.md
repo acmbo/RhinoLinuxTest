@@ -1,6 +1,6 @@
 # WSL2 versus Ubuntu VM — Test Progress and Session Handoff
 
-_Last updated: September 14, 2026_
+_Last updated: September 15, 2026_
 
 ## Purpose
 
@@ -54,16 +54,44 @@ construction, then aborts at the first native geometry operation with exit code
 - [x] Capture a narrow successful Ubuntu VM `strace` baseline.
 - [x] Identify the unrelated Snap .NET `GLIBCXX_3.4.32` loader problem.
 
-### Remaining technical steps: 5
+### Remaining technical steps: 1
 
-- [ ] **1. Re-run the focused tests from an unrestricted WSL terminal.**
-- [ ] **2. Capture the two remaining WSL installed-runtime hashes.**
-- [ ] **3. Verify the WSL .NET host and native library resolution.**
-- [ ] **4. If licensing still fails, capture the matching WSL `strace`.**
-- [ ] **5. Compare and sanitize the VM/WSL results for a McNeel report.**
+- [x] **1. Re-run the focused tests from an unrestricted WSL host context.**
+- [x] **2. Capture and compare the WSL installed-runtime hashes.**
+- [x] **3. Verify the WSL .NET host and native library resolution.**
+- [x] **4. Capture the matching WSL `strace` because licensing still fails.**
+- [ ] **5. Compare and sanitize the protected raw VM/WSL traces by exact path and
+  syscall context for a McNeel report.**
 
-A sixth non-test checklist item is to keep the Snap loader error, WSL licensing
-failure, and Compute API result separate in all reports.
+Keep the Snap loader error, WSL licensing failure, and Compute API result
+separate in all reports.
+
+## Latest live WSL retest
+
+A live retest on September 14, 2026 used the native-ext4 checkout at
+`/home/dev/RhinoOnLinux`, whose focused `MinimalHost` and `BoxSample` source
+files matched this repository byte-for-byte. The local non-Snap .NET SDK
+`10.0.111` was used. The token-visibility check exited `0`; the minimal host
+again reached the first native `Brep.CreateFromBox` call and exited `134` with
+`Rhino.Runtime.NotLicensedException`; and the full box workflow also exited
+`134` before producing a `.3dm`.
+
+All three installed-runtime hashes exactly match the Ubuntu VM baseline. The
+resolved C++ runtime is the normal `/lib/x86_64-linux-gnu/libstdc++.so.6`, which
+provides `GLIBCXX_3.4.32` and `GLIBCXX_3.4.33`; this is not the VM Snap loader
+failure. That interrupted attempt was superseded on September 15 by a clean
+rootless `strace` capture of the same minimal host. The failure again exited
+`134`; the selected syscalls recorded no `connect`, `EACCES`, or `EPERM` result
+and 135 `ENOENT` candidate-path results across 25 trace files. The raw WSL
+capture is locally retained in the Git-ignored native-ext4 directory
+`/home/dev/RhinoOnLinux/artifacts/wsl-minimal-host-strace-2026-09-15/`. It is
+not retained on this Windows-mounted repository checkout.
+
+See `wsl-minimal-host-strace-2026-09-15.md` for the result and high-level VM
+comparison. The remaining action is an exact reviewed path-level comparison with
+the raw VM baseline, which is not stored in this repository. Raw traces must be
+reviewed locally before sharing because they can include local paths, hostnames,
+and IP addresses.
 
 ## Repository layout
 
@@ -190,6 +218,13 @@ WSL licensing failure. Use a normal Microsoft/Ubuntu package or a local
 licensing result.
 
 ## Resume procedure on WSL2
+
+Steps 1 through 7 below remain the clean full-reproduction procedure. They were
+completed in the latest live retest using existing matching Release outputs;
+restore/build was not repeated. Step 8 was completed on September 15 with the
+safer temporary rootless tracer described in
+`wsl-live-retest-2026-09-14.md`. Resume with the exact reviewed VM/WSL raw-trace
+comparison described in `wsl-minimal-host-strace-2026-09-15.md`.
 
 Run the following from a normal, unrestricted WSL terminal rather than an IDE,
 agent sandbox, container, or restricted CI process.
@@ -376,16 +411,27 @@ addresses, hostnames, cache locations, and other environment details.
 
 ## Comparison questions for the next session
 
-Answer these in order:
+Answers now established:
 
-1. Do WSL and VM have identical RhinoCommon and native Rhino library hashes?
-2. Does WSL use a normal .NET 10 host and the correct system `libstdc++`?
-3. Does unrestricted WSL still fail at the first native geometry call?
-4. Does the WSL trace contain an `AF_INET`/`AF_INET6` connection absent from the
-   passing VM trace, and does it fail?
-5. Does WSL uniquely encounter `EACCES`, `EPERM`, or important `ENOENT` paths?
-6. Are there material differences in `HOME`, XDG directories, licensing caches,
-   certificate stores, proxy variables, time, or machine-identity interfaces?
+1. **Yes.** WSL and VM have identical recorded SHA-256 values for `RhinoCommon.dll`,
+   `libRhinoLibrary.so`, and Compute's `Rhino.Inside.dll`.
+2. **Yes.** The retest used local non-Snap .NET SDK `10.0.111`, and the resolved
+   system `libstdc++.so.6` provides `GLIBCXX_3.4.32` and newer.
+3. **Yes.** The unrestricted WSL retest still failed at the first native geometry
+   call with `NotLicensedException`, exit `134`.
+
+Additional trace answers now established:
+
+4. **No.** The WSL trace contains no `AF_INET`/`AF_INET6` connect and, in fact,
+   no `connect` call. The VM trace also contains no internet connect; its four
+   connects are local Unix-domain sockets.
+5. **No at the aggregate level.** Both traces contain zero `EACCES` and zero
+   `EPERM`. WSL has 135 `ENOENT` results versus the VM's 189, so the count alone
+   is not a causal difference.
+
+The remaining question is whether an exact reviewed raw-trace diff identifies a
+material path or context difference, including user/XDG state, licensing caches,
+certificate stores, proxy behavior, time, or machine-identity interfaces.
 
 ## Reporting rules
 
@@ -407,3 +453,5 @@ reports, or forum posts.
 - `doc/ubuntu-vm-compatibility-retest-2026-09-14.md` — exact passing VM baseline.
 - `doc/rhino-wsl-vs-ubuntu-vm-licensing-findings-2026-09-14.md` — detailed hypotheses and diagnostic sequence.
 - `doc/rhino-linux-licensing-retest-2026-09-14.md` — earlier developer-facing reproduction report.
+- `doc/wsl-live-retest-2026-09-14.md` — latest WSL retest and original trace-capture handoff.
+- `doc/wsl-minimal-host-strace-2026-09-15.md` — completed WSL trace and high-level comparison.

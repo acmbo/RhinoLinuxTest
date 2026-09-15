@@ -51,8 +51,9 @@ The `rhino3d` and `rhino-compute` package versions match those recorded for the
 failing WSL2 installation. The Rhino.Inside hash also matches the earlier WSL2
 and installed-Compute hash. This removes package version and Rhino.Inside binary
 version as explanations for the observed VM-versus-WSL licensing difference.
-The WSL2 hashes of `RhinoCommon.dll` and `libRhinoLibrary.so` still need to be
-captured before the installed Rhino runtime binaries can be declared identical.
+The September 14 WSL retest subsequently captured identical SHA-256 values for
+`RhinoCommon.dll` and `libRhinoLibrary.so`; the three compared installed runtime
+files are now known to be byte-identical across the two tested environments.
 
 DNS and HTTPS to `accounts.rhino3d.com` succeeded with certificate verification,
 and the standalone process loaded `RHINO_TOKEN` from the local Compute service

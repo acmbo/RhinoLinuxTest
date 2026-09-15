@@ -1,6 +1,6 @@
 # Rhino on Linux — Project Progress
 
-_Last updated: September 14, 2026_
+_Last updated: September 15, 2026_
 
 ## Canonical project layout
 
@@ -56,9 +56,11 @@ Controlled Ubuntu VM results from September 14, 2026:
 - A narrow successful minimal-host `strace` recorded no `AF_INET`/`AF_INET6`
   connects and no `EACCES` or `EPERM`; it is retained as the VM diff baseline.
 
-The Ubuntu VM and WSL2 records have the same `rhino3d` and `rhino-compute`
-package versions, and the same Rhino.Inside hash. WSL2 hashes for
-`RhinoCommon.dll` and `libRhinoLibrary.so` remain to be captured.
+The Ubuntu VM and WSL2 now have matching `rhino3d` and `rhino-compute`
+package versions and identical SHA-256 values for all three compared installed
+runtime files: `RhinoCommon.dll`, `libRhinoLibrary.so`, and the Compute child
+`Rhino.Inside.dll`. A live WSL retest also used the local non-Snap .NET 10.0.111
+host and found the system `libstdc++.so.6` provides `GLIBCXX_3.4.32` and newer.
 
 A separate VM setup issue was found: Snap's .NET 10 host injects the Core 22
 `libstdc++.so.6`, which lacks `GLIBCXX_3.4.32` required by the installed Rhino
@@ -73,6 +75,22 @@ resolver initialization       PASS
 RhinoCore construction        PASS
 first native geometry call    FAIL: Rhino.Runtime.NotLicensedException, exit 134
 ```
+
+A live WSL retest on September 14 reconfirmed that result from an ext4 checkout:
+the token visibility check exited `0`; `RhinoInside.MinimalHost` reached the
+native `Brep.CreateFromBox` call and exited `134`; and the full box workflow
+also exited `134` before it wrote a `.3dm`.
+
+On September 15, a clean matching WSL `strace` was captured from the same ext4
+checkout with a local non-Snap .NET host and a temporary rootless tracer. The
+minimal host again exited `134`. Its 25 trace files recorded zero `connect`
+calls (including `AF_INET`/`AF_INET6`), zero `EACCES`, zero `EPERM`, and 135
+`ENOENT` candidate-path results. The raw WSL trace is retained only in the
+native-ext4 checkout's Git-ignored artifact directory, not this Windows-mounted
+repository checkout. At a high level, neither this trace nor the passing VM
+trace shows an internet connect or a permission denial in the chosen syscall
+set. An exact reviewed path-level comparison with the protected VM raw trace is
+still required. See `doc/wsl-minimal-host-strace-2026-09-15.md`.
 
 See `doc/ubuntu-vm-compatibility-retest-2026-09-14.md` for exact VM results and
 `doc/rhino-wsl-vs-ubuntu-vm-licensing-findings-2026-09-14.md` for the comparison.
@@ -185,20 +203,19 @@ shared logs or reports.
 - `doc/rhino-inside-linux-next-steps.md` — earlier investigation notes.
 - `doc/rhino-wsl-vs-ubuntu-vm-licensing-findings-2026-09-14.md` — platform comparison and diagnostic sequence.
 - `doc/ubuntu-vm-compatibility-retest-2026-09-14.md` — verified full Ubuntu VM pass, hashes, and Snap runtime caveat.
-- `doc/wsl-ubuntu-test-progress.md` — focused WSL2/Ubuntu VM session handoff with completed work, five remaining steps, and copyable resume commands.
+- `doc/wsl-ubuntu-test-progress.md` — focused WSL2/Ubuntu VM session handoff and copyable resume commands.
+- `doc/wsl-live-retest-2026-09-14.md` — live non-Snap WSL retest results and the original trace-capture handoff.
+- `doc/wsl-minimal-host-strace-2026-09-15.md` — completed WSL trace, high-level VM comparison, and remaining exact-diff action.
 
 ## Next steps
 
-1. Re-run the focused standalone tests from a normal, unrestricted WSL terminal.
-2. Capture WSL2 SHA-256 hashes for `/usr/lib/rhino3d/RhinoCommon.dll` and
-   `/usr/lib/rhino3d/libRhinoLibrary.so` and compare them with the VM report.
-3. Confirm the WSL .NET host is not injecting an incompatible runtime library.
-4. If WSL2 still throws `NotLicensedException`, collect matching narrow `strace`
-   captures on WSL2 and the VM for `connect`, `openat`, `access`, `statx`, and
-   `readlink`.
-5. Compare failed connections and missing/denied files, sanitize traces, and send
-   the minimal reproducer plus the VM-pass/WSL-fail evidence to McNeel.
-6. Keep the Snap `GLIBCXX` loader error, WSL2 licensing error, and Compute API
+1. Compare the reviewed WSL trace with the protected successful Ubuntu VM raw
+   trace by exact path and syscall context. Sanitize any selected evidence before
+   sharing it; the WSL raw trace is preserved locally in a Git-ignored artifact.
+2. If that exact comparison identifies no material network, access, or path
+   difference, send the minimal reproducer and VM-pass/WSL-fail comparison to
+   McNeel as evidence of a probable WSL2 standalone licensing defect.
+3. Keep the Snap `GLIBCXX` loader error, WSL2 licensing error, and Compute API
    results separate in all reporting.
 
 ## Known limitations

@@ -25,10 +25,12 @@ algorithm. Existing tests show that:
    in the same WSL2 distribution.
 7. The standalone application can perform licensed geometry in a full Ubuntu VM.
 
-The most likely remaining explanations are an execution sandbox or network
-restriction, a Rhino package/version difference, or a WSL-specific limitation or
-bug in the current Linux licensing path. Machine identity, user/cache state, TLS
-configuration, proxy behavior, and clock drift remain secondary possibilities.
+The remaining explanations are a WSL-specific limitation or defect in the
+current Linux licensing path, or a host-context difference that is outside the
+selected syscall evidence. Machine identity, user/cache state, TLS configuration,
+proxy behavior, and clock drift remain hypotheses. The September 15 unrestricted
+WSL trace weakens a simple trace-visible network-denial or permission-denial
+explanation; it does not eliminate behavior outside the captured syscall set.
 
 ## Verified Ubuntu VM baseline
 
@@ -40,9 +42,10 @@ Compute API also returned `200 OK` with a serialized mesh.
 
 The VM uses the same recorded `rhino3d` (`9.0.26257.7309`) and `rhino-compute`
 (`9.0.26159.12510-wip`) package versions as WSL2, and its Rhino.Inside binary
-has the already-matching SHA-256. Package version and Rhino.Inside provenance
-are therefore no longer leading explanations. WSL2 hashes for RhinoCommon and
-the native Rhino library are still needed for a complete binary comparison.
+has the already-matching SHA-256. WSL2 subsequently recorded identical
+SHA-256 values for RhinoCommon and the native Rhino library as well. Installed
+Rhino runtime binary identity, package version, and Rhino.Inside provenance are
+therefore no longer leading explanations.
 
 The VM's Snap-managed `dotnet` initially caused a separate pre-start
 `GLIBCXX_3.4.32` loader failure. Bypassing Snap's Core 22 C++ runtime made every
@@ -53,10 +56,16 @@ RhinoCore construction. See
 for exact results and hashes.
 
 A narrow successful VM `strace` contained no internet-socket `connect` call and
-no `EACCES` or `EPERM`. This weakens the claim that every successful standalone
-startup must establish a new outbound TCP connection, although cached licensing
-state or untraced behavior remains possible. A matching WSL2 trace is required
-before drawing a licensing-network conclusion.
+no `EACCES` or `EPERM`. The matching WSL trace was captured on September 15:
+it reproduced exit `134` yet also recorded no `connect`, `EACCES`, or `EPERM`
+result in the selected syscall set. The VM had four local Unix-domain connects;
+WSL had none. The aggregate `ENOENT` counts were 189 (VM) and 135 (WSL).
+
+This weakens a simple trace-visible outbound-TCP or permission-denial
+explanation, although cached licensing state or behavior outside the selected
+syscalls remains possible. An exact reviewed path-level comparison with the
+protected VM trace is still required before drawing a licensing conclusion. See
+`wsl-minimal-host-strace-2026-09-15.md`.
 
 ## What `NotLicensedException` means here
 
@@ -380,8 +389,12 @@ Perform the following steps in order:
 6. Compare proxy variables and CA certificates.
 7. Compare machine-identity interface availability.
 8. Compare process user, `HOME`, XDG paths, and relevant file permissions.
-9. Capture sanitized syscall traces on WSL2 and the VM.
-10. If no meaningful difference is found, report the minimal reproduction to
+9. Capture sanitized syscall traces on WSL2 and the VM. **Completed at the
+    aggregate level:** neither trace has an internet connect, `EACCES`, or
+    `EPERM` result in the selected syscall set.
+10. Compare the protected raw traces by exact reviewed path and syscall context,
+    then sanitize only the material differences.
+11. If no meaningful difference is found, report the minimal reproduction to
     McNeel as a probable WSL2 standalone Rhino.Inside licensing defect.
 
 ## Syscall comparison
@@ -407,6 +420,13 @@ Review traces before sharing them. They can contain usernames, filesystem paths,
 IP addresses, and details about the local environment. They should not contain
 the token value with this restricted syscall selection, but they must still be
 reviewed before publication.
+
+The completed September 15 WSL capture has 25 trace files, no `connect`,
+`EACCES`, or `EPERM` result, and 135 `ENOENT` results. The passing VM baseline
+has 21 files, four local Unix-domain connects, no internet connect, no
+`EACCES`/`EPERM`, and 189 `ENOENT` results. Treat these counts as triage only;
+the raw VM trace is required for an exact path-level comparison. See
+`wsl-minimal-host-strace-2026-09-15.md`.
 
 ## Information to include in a McNeel report
 
