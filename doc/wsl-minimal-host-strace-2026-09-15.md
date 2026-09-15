@@ -89,8 +89,9 @@ candidate-path probes alone is not causal evidence.
 
 ## Remaining comparison
 
-An exact normalized path-level diff still requires access to the protected raw
-Ubuntu VM baseline trace, which is not stored in this repository. Compare the
-reviewed `ENOENT`, `EACCES`, `EPERM`, and failed-`connect` records by path and
-context, redact local identifiers, and only then add selected evidence to a
-McNeel report. Keep the raw capture out of Git and never include the token.
+An exact normalized path-level diff still requires both protected raw traces on
+one trusted machine. Use `tools/compare-rhino-straces.py` as documented in
+`wsl-ubuntu-comparison-tooling-2026-09-15.md` to compare reviewed `ENOENT`,
+`EACCES`, `EPERM`, and `connect` records by path and syscall. Redact local
+identifiers, and only then add selected evidence to a McNeel report. Keep both
+raw captures out of Git and never include the token.

@@ -287,12 +287,21 @@ test -r /sys/class/dmi/id/product_uuid \
   && echo "DMI UUID available" \
   || echo "DMI UUID unavailable"
 
-test -s /proc/sys/kernel/random/boot_id \
-  && echo "boot ID available" \
-  || echo "boot ID unavailable"
+if IFS= read -r boot_id < /proc/sys/kernel/random/boot_id \
+    && test -n "$boot_id"; then
+  echo "boot ID available"
+else
+  echo "boot ID unavailable or empty"
+fi
+unset boot_id
 
 hostname
 ```
+
+Do not use `test -s` for the procfs/sysfs identity files. Their reported file
+size may be zero even when reading returns content. The repository helper
+`tools/collect-rhino-compat-context.sh` performs this check without printing the
+identifier values.
 
 ### 6. Clock drift
 

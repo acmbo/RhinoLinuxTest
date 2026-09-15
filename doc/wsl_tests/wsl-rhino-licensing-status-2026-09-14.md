@@ -7,6 +7,13 @@
 
 ## Executive summary
 
+> **September 15 correction:** the boot-ID classification below used `test -s`.
+> That test can report false "empty" results for procfs/sysfs pseudo-files whose
+> stat size is zero even though a read returns content. The WSL boot-ID result is
+> therefore inconclusive pending a read-based retest with
+> `tools/collect-rhino-compat-context.sh`. The missing WSL DMI hierarchy remains
+> a valid observed platform difference.
+
 The WSL2 environment passes the basic prerequisites that can be checked without
 successfully licensing Rhino:
 
@@ -418,9 +425,10 @@ Values were deliberately not recorded. Only availability was tested.
 
 ### Interpretation
 
-The empty boot ID and missing DMI hierarchy are concrete differences that are
-likely to distinguish WSL2 from a conventional VM. They should be checked in the
-Ubuntu VM.
+The missing DMI hierarchy is a concrete WSL2/VM difference. The boot-ID result
+was originally classified as empty, but the September 15 correction above makes
+that result inconclusive until the file is read rather than checked with
+`test -s`.
 
 There is no current proof that Rhino licensing consumes either value. If the VM
 has valid boot and DMI identities while the otherwise identical standalone host

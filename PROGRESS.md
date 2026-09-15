@@ -90,7 +90,12 @@ native-ext4 checkout's Git-ignored artifact directory, not this Windows-mounted
 repository checkout. At a high level, neither this trace nor the passing VM
 trace shows an internet connect or a permission denial in the chosen syscall
 set. An exact reviewed path-level comparison with the protected VM raw trace is
-still required. See `doc/wsl-minimal-host-strace-2026-09-15.md`.
+still required. A reusable normalizer/diff tool and a non-secret compatibility
+context collector were added on September 15. The corrected collector also
+showed that `test -s` is unsuitable for the procfs boot-ID check, so the earlier
+claim that WSL's `boot_id` is empty must be retested by reading it without
+printing its value. See `doc/wsl-minimal-host-strace-2026-09-15.md` and
+`doc/wsl-ubuntu-comparison-tooling-2026-09-15.md`.
 
 See `doc/ubuntu-vm-compatibility-retest-2026-09-14.md` for exact VM results and
 `doc/rhino-wsl-vs-ubuntu-vm-licensing-findings-2026-09-14.md` for the comparison.
@@ -206,16 +211,20 @@ shared logs or reports.
 - `doc/wsl-ubuntu-test-progress.md` — focused WSL2/Ubuntu VM session handoff and copyable resume commands.
 - `doc/wsl-live-retest-2026-09-14.md` — live non-Snap WSL retest results and the original trace-capture handoff.
 - `doc/wsl-minimal-host-strace-2026-09-15.md` — completed WSL trace, high-level VM comparison, and remaining exact-diff action.
+- `doc/wsl-ubuntu-comparison-tooling-2026-09-15.md` — corrected identity probe and reusable protected-trace comparison commands.
 
 ## Next steps
 
-1. Compare the reviewed WSL trace with the protected successful Ubuntu VM raw
-   trace by exact path and syscall context. Sanitize any selected evidence before
-   sharing it; the WSL raw trace is preserved locally in a Git-ignored artifact.
-2. If that exact comparison identifies no material network, access, or path
+1. Run `tools/collect-rhino-compat-context.sh` in unrestricted WSL to replace
+   the earlier unreliable `test -s` boot-ID result with a read-based presence
+   check that does not print the identifier.
+2. Compare the reviewed WSL trace with the protected successful Ubuntu VM raw
+   trace using `tools/compare-rhino-straces.py`. Sanitize selected evidence
+   before sharing it; neither raw trace should be committed.
+3. If that exact comparison identifies no material network, access, or path
    difference, send the minimal reproducer and VM-pass/WSL-fail comparison to
    McNeel as evidence of a probable WSL2 standalone licensing defect.
-3. Keep the Snap `GLIBCXX` loader error, WSL2 licensing error, and Compute API
+4. Keep the Snap `GLIBCXX` loader error, WSL2 licensing error, and Compute API
    results separate in all reporting.
 
 ## Known limitations

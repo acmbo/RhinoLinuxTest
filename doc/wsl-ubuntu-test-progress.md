@@ -54,13 +54,15 @@ construction, then aborts at the first native geometry operation with exit code
 - [x] Capture a narrow successful Ubuntu VM `strace` baseline.
 - [x] Identify the unrelated Snap .NET `GLIBCXX_3.4.32` loader problem.
 
-### Remaining technical steps: 1
+### Remaining technical steps: 2
 
 - [x] **1. Re-run the focused tests from an unrestricted WSL host context.**
 - [x] **2. Capture and compare the WSL installed-runtime hashes.**
 - [x] **3. Verify the WSL .NET host and native library resolution.**
 - [x] **4. Capture the matching WSL `strace` because licensing still fails.**
-- [ ] **5. Compare and sanitize the protected raw VM/WSL traces by exact path and
+- [ ] **5. Re-run the machine-identity availability probe in WSL using the
+  read-based collector; the earlier `test -s` boot-ID result is inconclusive.**
+- [ ] **6. Compare and sanitize the protected raw VM/WSL traces by exact path and
   syscall context for a McNeel report.**
 
 Keep the Snap loader error, WSL licensing failure, and Compute API result
@@ -88,10 +90,11 @@ capture is locally retained in the Git-ignored native-ext4 directory
 not retained on this Windows-mounted repository checkout.
 
 See `wsl-minimal-host-strace-2026-09-15.md` for the result and high-level VM
-comparison. The remaining action is an exact reviewed path-level comparison with
-the raw VM baseline, which is not stored in this repository. Raw traces must be
-reviewed locally before sharing because they can include local paths, hostnames,
-and IP addresses.
+comparison. The repository now includes `tools/compare-rhino-straces.py` for the
+exact reviewed path-level comparison and `tools/collect-rhino-compat-context.sh`
+for the corrected boot-ID probe. The remaining actions are to run that probe in
+WSL and compare the protected raw traces. Raw traces must be reviewed locally
+before sharing because they can include local paths, hostnames, and IP addresses.
 
 ## Repository layout
 
@@ -455,3 +458,4 @@ reports, or forum posts.
 - `doc/rhino-linux-licensing-retest-2026-09-14.md` — earlier developer-facing reproduction report.
 - `doc/wsl-live-retest-2026-09-14.md` — latest WSL retest and original trace-capture handoff.
 - `doc/wsl-minimal-host-strace-2026-09-15.md` — completed WSL trace and high-level comparison.
+- `doc/wsl-ubuntu-comparison-tooling-2026-09-15.md` — corrected identity probe and exact trace-diff tooling.

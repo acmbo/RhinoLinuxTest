@@ -100,10 +100,12 @@ This runtime-loader issue must be kept separate from the WSL licensing issue:
   and `System clock synchronized: no`. Licensing still succeeded, so an active
   NTP service is not itself required; materially incorrect time remains a valid
   failure hypothesis.
-- `/etc/machine-id` was present. DMI UUID and boot-ID readability were unavailable
-  to the automated execution context, yet licensing succeeded. Their absence or
-  inaccessibility is therefore not sufficient by itself to reproduce the WSL2
-  failure.
+- `/etc/machine-id` was present. A corrected read-based probe on September 15
+  found that `/proc/sys/kernel/random/boot_id` is readable and non-empty even
+  though procfs reports a zero file size; DMI product name and vendor are also
+  readable, while the DMI UUID is present but unreadable to this user. The
+  earlier `test -s` boot-ID check was not valid for procfs. The WSL boot-ID must
+  be retested with the corrected probe before it is treated as empty.
 - The installed Compute service unit was inactive, so the parent was launched
   temporarily on `127.0.0.1:5059` and shut down after the API test.
 
