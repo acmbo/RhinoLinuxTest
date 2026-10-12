@@ -187,26 +187,6 @@ dotnet --list-sdks
 
 cat <<'NEXT_STEPS'
 
-Next steps:
-  1. Edit the environment file as root and set RHINO_TOKEN (your private
-     Core-Hour billing token) and RHINO_COMPUTE_KEY (your client API key):
-       sudoedit /etc/rhino-compute/environment
-     Do not commit, paste into logs, or share RHINO_TOKEN.
-  2. After configuring credentials, start and inspect the service:
-       sudo systemctl start rhino-compute
-       sudo systemctl status rhino-compute
-       sudo journalctl -u rhino-compute -f
-  3. .NET SDKs 8 and 10 are installed for the console BoxSample; the packaged
-     Compute service may be self-contained. If a different user will run the
-     sample, sign in as that user and create their config root:
-       mkdir -p -- "${XDG_CONFIG_HOME:-$HOME/.config}"
-     Securely export your private RHINO_TOKEN into that user's shell using your
-     approved secret-management method; do not put its value in command history,
-     source control, or logs. From the repository root, run:
-       dotnet run --project RhinoLinxTest/RhinoInside.BoxSample
-     The installed host is /usr/share/dotnet/dotnet. If /usr/local/bin/dotnet
-     was retained, use that absolute host or put /usr/share/dotnet first in PATH.
-
 WSL2 note: the service commands require systemd to be enabled and running
 inside the distro. If systemctl reports that systemd is not running, enable it
 in /etc/wsl.conf with:
@@ -219,4 +199,18 @@ if not already done, and start the service. This installer does not alter
 Important: RHINO_TOKEN is a Core-Hour billing token. Keep it secret; its use
 can incur charges. Rhino.Compute for Linux is WIP software and is not
 recommended for production by the current guide.
+
+Next steps:
+  1. To run Rhino workloads set the Rhino_token via export. This set is temporarily for
+     a console session:
+	     `export RHINO_TOKEN='YourTOKEN'`
+	 Never expose the token to an agent. You can set the token via plain text a permanent
+	 variable in Linux, but beware that it will be stored on you machine permantly
+  2. Running dotnet projects:
+      - To run dotnet projects set RHINO_TOKEN with export in the same console
+	  - Then start a project with an RhinoInside solver with "dotnet run"
+	  - WARNING: Projects without RhinoSolver  wont run currently. Rhino cant start with UI in Linux!
+  2. Running RhinoCompute:
+      - use command: rhino-compute-start 
+        
 NEXT_STEPS
