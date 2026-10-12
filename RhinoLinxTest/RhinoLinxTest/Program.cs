@@ -35,6 +35,8 @@ namespace GDEnergyWorker
                 _cleanedUp = true;
             }
 
+            Console.WriteLine("test");
+
             // Force garbage collection before disposing RhinoCore
             // to ensure all Rhino objects are cleaned up while Rhino is still alive
             GC.Collect();
@@ -179,8 +181,7 @@ namespace GDEnergyWorker
 #pragma warning restore CS0162
 
             logger.Information("Starting Reading Job");
-
-
+             
 
             try
             {

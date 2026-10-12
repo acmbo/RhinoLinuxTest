@@ -8,8 +8,6 @@ set -Eeuo pipefail
 # have been reviewed and configured by the developer. Rhino.Compute on Linux
 # is currently documented as WIP, not recommended for production.
 
-readonly DOTNET_SDK_VERSION='10.0.112'
-readonly DOTNET_INSTALL_URL='https://dotnet.microsoft.com/download/dotnet/scripts/v1/dotnet-install.sh'
 readonly MCNEEL_KEY_URL='https://mcneel-packages.s3.amazonaws.com/mcneel-packages.gpg.key'
 readonly MCNEEL_REPO='deb [signed-by=/usr/share/keyrings/mcneel-archive-keyring.gpg] https://mcneel-packages.s3.amazonaws.com/deb stable main'
 readonly KEYRING_PATH='/usr/share/keyrings/mcneel-archive-keyring.gpg'
@@ -113,24 +111,49 @@ run_privileged apt-get update
 run_privileged env DEBIAN_FRONTEND=noninteractive apt-get install -y \
   ca-certificates gnupg wget
 
-say "Installing .NET SDK ${DOTNET_SDK_VERSION} under /usr/share/dotnet"
-wget -q "$DOTNET_INSTALL_URL" -O "$work_dir/dotnet-install.sh"
-run_privileged bash "$work_dir/dotnet-install.sh" \
-  --version "$DOTNET_SDK_VERSION" \
-  --install-dir /usr/share/dotnet \
-  --no-path
-
-say 'Exposing the .NET host'
-if [[ -L /usr/local/bin/dotnet && "$(readlink /usr/local/bin/dotnet)" == /usr/share/dotnet/dotnet ]]; then
-  printf 'Already configured: /usr/local/bin/dotnet -> /usr/share/dotnet/dotnet\n'
-elif [[ -e /usr/local/bin/dotnet || -L /usr/local/bin/dotnet ]]; then
-  printf 'WARNING: Keeping existing /usr/local/bin/dotnet (not overwritten).\n' >&2
-  printf 'Use the installed host directly: /usr/share/dotnet/dotnet --info\n' >&2
-  printf 'To prefer this .NET installation in PATH: export PATH="/usr/share/dotnet:$PATH"\n' >&2
+say 'Adding the Microsoft package repository for .NET'
+if [[ ! -f /etc/apt/sources.list.d/microsoft-prod.list ]]; then
+  wget -q \
+    "https://packages.microsoft.com/config/ubuntu/${VERSION_ID}/packages-microsoft-prod.deb" \
+    -O "$work_dir/packages-microsoft-prod.deb"
+  run_privileged dpkg -i "$work_dir/packages-microsoft-prod.deb"
 else
-  run_privileged ln -s /usr/share/dotnet/dotnet /usr/local/bin/dotnet
-  printf 'Created /usr/local/bin/dotnet -> /usr/share/dotnet/dotnet\n'
+  printf 'Microsoft repository already configured.\n'
 fi
+run_privileged apt-get update
+
+# Check SDKs by major version so an SDK installed outside APT is also detected.
+dotnet_sdk_list() {
+  if command -v dotnet >/dev/null 2>&1; then
+    dotnet --list-sdks
+  elif [[ -x /usr/share/dotnet/dotnet ]]; then
+    /usr/share/dotnet/dotnet --list-sdks
+  else
+    return 0
+  fi
+}
+
+has_dotnet_sdk() {
+  dotnet_sdk_list | awk -v major="$1" '$1 ~ ("^" major "\\.") { found = 1 } END { exit !found }'
+}
+
+say 'Installing missing .NET SDKs (8 and 10)'
+missing_dotnet_packages=()
+for sdk_major in 8 10; do
+  if has_dotnet_sdk "$sdk_major"; then
+    printf '.NET SDK %s is already installed.\n' "$sdk_major"
+  else
+    missing_dotnet_packages+=("dotnet-sdk-${sdk_major}.0")
+  fi
+done
+if ((${#missing_dotnet_packages[@]})); then
+  run_privileged env DEBIAN_FRONTEND=noninteractive apt-get install -y \
+    "${missing_dotnet_packages[@]}"
+fi
+
+for sdk_major in 8 10; do
+  has_dotnet_sdk "$sdk_major" || die ".NET SDK ${sdk_major} was not installed successfully."
+done
 
 say 'Adding the McNeel APT signing key and package source'
 wget -q "$MCNEEL_KEY_URL" -O "$work_dir/mcneel-packages.gpg.key"
@@ -159,7 +182,8 @@ fi
 
 printf '\nInstallation complete. Installed package versions:\n'
 dpkg-query -W -f='  ${Package} ${Version}\n' rhino3d rhino-compute 2>/dev/null || true
-printf '  dotnet SDK: %s (installed at /usr/share/dotnet)\n' "$DOTNET_SDK_VERSION"
+printf '  .NET SDKs:\n'
+dotnet --list-sdks
 
 cat <<'NEXT_STEPS'
 
@@ -172,7 +196,7 @@ Next steps:
        sudo systemctl start rhino-compute
        sudo systemctl status rhino-compute
        sudo journalctl -u rhino-compute -f
-  3. The .NET SDK 10.0.112 is installed for the console BoxSample; the packaged
+  3. .NET SDKs 8 and 10 are installed for the console BoxSample; the packaged
      Compute service may be self-contained. If a different user will run the
      sample, sign in as that user and create their config root:
        mkdir -p -- "${XDG_CONFIG_HOME:-$HOME/.config}"
